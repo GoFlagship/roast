@@ -1,0 +1,59 @@
+{
+  "name": "@goflagship/roast",
+  "version": "0.1.0",
+  "description": "Brutal terminal code analyzer and codebase roaster",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "roast": "./dist/index.js",
+    "@goflagship/roast": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GoFlagship/roast.git"
+  },
+  "bugs": {
+    "url": "https://github.com/GoFlagship/roast/issues"
+  },
+  "homepage": "https://github.com/GoFlagship/roast#readme",
+  "keywords": [
+    "cli",
+    "terminal",
+    "code-analysis",
+    "ast",
+    "complexity",
+    "roast",
+    "opentui",
+    "linter",
+    "typescript",
+    "react",
+    "jsx"
+  ],
+  "author": "flagship",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "start": "bun src/index.ts",
+    "start:dist": "node dist/index.js"
+  },
+  "dependencies": {
+    "@opentui/core": "^0.5.12",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3"
+  }
+}
