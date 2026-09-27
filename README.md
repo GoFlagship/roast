@@ -2,7 +2,7 @@
 
 > Brutal terminal code analyzer and codebase roaster powered by OpenTUI and TypeScript AST inspection.
 
-Roast inspects your TypeScript, JavaScript, React, and JSX codebase, detects code smells, anti-patterns, and architectural bloat, and delivers an uncompromising health grade and roast verdict directly inside an interactive terminal UI.
+Roast inspects your TypeScript, JavaScript, React, and JSX codebase, detects code smells, anti-patterns, and architectural bloat, and delivers an uncompromising health grade and roast verdict directly inside an interactive terminal UI or formatted CLI output.
 
 ---
 
@@ -19,24 +19,66 @@ Roast inspects your TypeScript, JavaScript, React, and JSX codebase, detects cod
   - **Monolithic Components**: Detects bloated components exceeding 150 lines.
   - **Untyped Props**: Identifies React components with missing interfaces or untyped props.
   - **Unmemorized Inline Callbacks**: Flags giant inline function expressions inside JSX attributes.
-- **File Breakdown & Gauges**: Expandable file-by-file dropdowns with ASCII progress bars, penalty itemization, and health scores.
+- **Interactive TUI & CLI Output**: Rich full-screen terminal interface with expandable file dropdowns, or instant formatted CLI reports for CI/CD pipelines.
 - **Roast Verdict**: Brutally honest evaluations based on codebase health ranking.
 
 ---
 
-## Installation
+## Installation & Quick Start
 
-Run directly with `npx` (no installation required):
+### Interactive Terminal UI (Recommended via Bun)
+
+The interactive full-screen interface is powered by OpenTUI's native Zig core. Run directly using `bunx`:
+
+```bash
+bunx --bun @goflagship/roast
+```
+
+Or install globally with Bun:
+
+```bash
+bun add -g @goflagship/roast
+roast
+```
+
+### Universal Mode (Node.js & npx)
+
+Run directly using `npx` across any Node.js environment (Node 18, 20, 22, 24):
 
 ```bash
 npx @goflagship/roast
 ```
 
-Or install globally via npm:
+Or install globally with npm:
 
 ```bash
 npm install -g @goflagship/roast
+roast
 ```
+
+---
+
+## Runtime Compatibility & Engines Note
+
+### OpenTUI and Native FFI
+
+The interactive terminal UI uses OpenTUI, which requires native Foreign Function Interface (FFI) bindings provided by the **Bun** runtime (`bun >= 1.3.0`).
+
+- When executed with `bunx --bun @goflagship/roast` (or on a system where Bun is installed), Roast automatically launches the full interactive terminal application.
+- When executed in a pure Node.js environment where Bun is not present (such as CI/CD runners or headless Linux servers), Roast automatically falls back to **Headless CLI Mode**. The entire AST analysis runs in pure Node.js and prints the formatted roast report with ASCII gauges and deductions directly to stdout.
+
+### The npm `EBADENGINE` Warning
+
+During `npm install -g @goflagship/roast`, npm may display an informational warning:
+
+```text
+npm warn EBADENGINE Unsupported engine {
+  package: '@opentui/core@0.5.12',
+  required: { bun: '>=1.3.0', node: '>=26.4.0' }
+}
+```
+
+This warning originates from the upstream `@opentui/core` dependency package, which targets Node 26 for future native Node FFI support while running natively on Bun today. This warning is non-blocking and does not affect package installation or code analysis.
 
 ---
 
@@ -52,7 +94,7 @@ roast
 
 ### Direct Target Analysis
 
-Pass the target folder directly to start analysis immediately:
+Pass the target folder directly to analyze immediately:
 
 ```bash
 roast ./src
@@ -64,7 +106,7 @@ Analyze the current directory:
 roast .
 ```
 
-### Options
+### Command Options
 
 ```bash
 roast --help       # Display help information
@@ -73,7 +115,7 @@ roast --version    # Display version number
 
 ---
 
-## Keyboard Controls
+## Keyboard Controls (Interactive TUI)
 
 ### Input Screen
 | Key | Action |
@@ -136,7 +178,7 @@ bun start
 bun run build
 
 # Run built distribution
-node dist/index.js
+bun dist/index.js
 ```
 
 ---
