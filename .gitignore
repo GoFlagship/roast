@@ -3,3 +3,4 @@ dist
 .agents
 *.tgz
 *.log
+package-lock.json
