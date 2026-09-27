@@ -1,6 +1,6 @@
 {
   "name": "@goflagship/roast",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Brutal terminal code analyzer and codebase roaster",
   "type": "module",
   "main": "./dist/index.js",
