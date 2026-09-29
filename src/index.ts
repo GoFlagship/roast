@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process"
-import { printCliReport } from "./ui/cliPrinter.js"
-import { runFullAnalysis } from "./scanner/scanner.js"
+import { runNodeCli } from "./ui/nodeCli.js"
 
 const args = process.argv.slice(2)
 
@@ -11,12 +10,15 @@ if (args.includes("-h") || args.includes("--help")) {
 
   Usage:
     roast [directory]
+    roast [directory] --cli
     npx @goflagship/roast [directory]
     bunx @goflagship/roast [directory]
 
   Options:
     -h, --help      Display help
     -v, --version   Display version
+    --cli, --no-tui Run in standard CLI mode without OpenTUI
+    --tui           Run with interactive TUI (requires Bun)
 
   Examples:
     roast
@@ -27,18 +29,26 @@ if (args.includes("-h") || args.includes("--help")) {
 }
 
 if (args.includes("-v") || args.includes("--version")) {
-  console.log("0.1.0")
+  console.log("1.0.1")
   process.exit(0)
 }
 
-const targetPath = args.find((arg) => !arg.startsWith("-")) || "."
+const forceCli = args.includes("--cli") || args.includes("--no-tui")
+const forceTui = args.includes("--tui")
 const isBun = typeof process.versions.bun === "string"
 
-if (isBun) {
-  const { RoastApp } = await import("./ui/app.js")
-  const app = new RoastApp()
-  await app.start(targetPath === "." && !args.includes(".") ? undefined : targetPath)
-} else {
+if (isBun && !forceCli) {
+  try {
+    const { RoastApp } = await import("./ui/app.js")
+    const app = new RoastApp()
+    const targetPath = args.find((arg) => !arg.startsWith("-"))
+    await app.start(targetPath)
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.warn(`[Warning] OpenTUI unavailable (${msg}), falling back to CLI...`)
+    await runNodeCli(args)
+  }
+} else if (forceTui) {
   let hasBun = false
   try {
     const check = spawnSync("bun", ["--version"], { stdio: "ignore" })
@@ -48,16 +58,14 @@ if (isBun) {
   }
 
   if (hasBun) {
-    const res = spawnSync("bun", [process.argv[1], ...args], { stdio: "inherit" })
+    const cleanArgs = args.filter((a) => a !== "--tui")
+    const res = spawnSync("bun", [process.argv[1], ...cleanArgs], { stdio: "inherit" })
     process.exit(res.status ?? 0)
+  } else {
+    console.warn("[Warning] TUI mode requires Bun. Running in standard CLI mode instead.")
+    await runNodeCli(args)
   }
-
-  try {
-    const report = runFullAnalysis(targetPath)
-    printCliReport(report)
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error(`Error: ${msg}`)
-    process.exit(1)
-  }
+} else {
+  // Running natively on Node without OpenTUI
+  await runNodeCli(args)
 }

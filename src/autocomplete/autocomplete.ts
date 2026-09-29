@@ -2,8 +2,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { parseInputPath } from "./pathHelper.js"
 import { computeNextCompletion as computeCycle } from "./cycle.js"
-
-const IGNORED_DIRS = new Set(["node_modules", ".git", "dist", ".agents"])
+import { DEFAULT_IGNORED_DIRS } from "../scanner/walker.js"
 
 function isDirectory(dirPath: string): boolean {
   try {
@@ -15,7 +14,7 @@ function isDirectory(dirPath: string): boolean {
 
 function isIgnoredEntry(entry: fs.Dirent): boolean {
   if (!entry.isDirectory()) return true
-  return IGNORED_DIRS.has(entry.name)
+  return DEFAULT_IGNORED_DIRS.has(entry.name)
 }
 
 function matchesPartial(name: string, partial: string): boolean {

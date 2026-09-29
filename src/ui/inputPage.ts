@@ -94,10 +94,6 @@ export class InputPage {
       this.onStartRoast(val)
     })
 
-    this.folderInput.on(InputRenderableEvents.CHANGE, () => {
-      this.onStartRoast(this.folderInput.value)
-    })
-
     this.updateSuggestions(this.folderInput.value)
   }
 

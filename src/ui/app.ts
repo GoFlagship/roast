@@ -2,11 +2,12 @@ import { BoxRenderable, createCliRenderer, type CliRenderer, type KeyEvent } fro
 import fs from "node:fs"
 import path from "node:path"
 import { InputPage } from "./inputPage.js"
+import { LoadingPage } from "./loadingPage.js"
 import { createReportView } from "./reportPage.js"
-import { runFullAnalysis } from "../scanner/scanner.js"
+import { runFullAnalysisAsync } from "../scanner/scanner.js"
 import type { FullAnalysisReport } from "../types/index.js"
 
-type AppState = "INPUT" | "REPORT"
+type AppState = "INPUT" | "LOADING" | "REPORT"
 
 const TOGGLE_KEYS = new Set(["return", "space", "right", "left"])
 const EXIT_KEYS = new Set(["escape", "q"])
@@ -15,6 +16,7 @@ const ENTER_KEYS = new Set(["return", "enter"])
 export class RoastApp {
   private renderer!: CliRenderer
   private inputPage!: InputPage
+  private loadingPage!: LoadingPage
   private currentState: AppState = "INPUT"
   private currentReport: FullAnalysisReport | null = null
   private currentFileIndex = 0
@@ -41,10 +43,11 @@ export class RoastApp {
     this.inputPage = new InputPage(
       this.renderer,
       (targetPath) => {
-        this.triggerAnalysis(targetPath)
+        void this.triggerAnalysis(targetPath)
       },
       defaultPath,
     )
+    this.loadingPage = new LoadingPage(this.renderer)
 
     this.renderer.keyInput.on("keypress", (key) => this.handleKey(key))
     this.renderer.on("resize", (width) => this.handleResize(width))
@@ -53,11 +56,13 @@ export class RoastApp {
     this.inputPage.focus()
 
     if (initialPath) {
-      this.triggerAnalysis(initialPath)
+      void this.triggerAnalysis(initialPath)
     }
   }
 
-  private triggerAnalysis(customPath?: string): void {
+  private async triggerAnalysis(customPath?: string): Promise<void> {
+    if (this.currentState === "LOADING") return
+
     const target = (customPath ?? this.inputPage.getValue()).trim() || "."
     const resolved = path.resolve(target)
 
@@ -66,18 +71,37 @@ export class RoastApp {
       return
     }
 
-    this.inputPage.blur()
-    this.renderer.setCursorPosition(0, 0, false)
-    this.inputPage.setStatus("Roasting in progress...")
+    this.showLoadingScreen(target)
+
+    // Give OpenTUI a moment to paint the loading view
+    await new Promise((resolve) => setTimeout(resolve, 80))
 
     try {
-      const report = runFullAnalysis(target)
+      const report = await runFullAnalysisAsync(target, (progress) => {
+        this.loadingPage.updateProgress(progress.currentFile, progress.scannedCount)
+      })
+      this.loadingPage.stopAnimation()
       this.showReportScreen(report)
     } catch (err: unknown) {
+      this.loadingPage.stopAnimation()
       const msg = err instanceof Error ? err.message : String(err)
+      this.showInputScreen()
       this.inputPage.setStatus(`Error during analysis: ${msg}`)
       this.inputPage.focus()
     }
+  }
+
+  private showLoadingScreen(targetPath: string): void {
+    this.currentState = "LOADING"
+    this.inputPage.blur()
+    this.renderer.root.remove(this.inputPage.view)
+    if (this.reportView) {
+      this.renderer.root.remove(this.reportView)
+      this.reportView = null
+    }
+    this.renderer.root.add(this.loadingPage.view)
+    this.loadingPage.startAnimation(targetPath)
+    this.renderer.setCursorPosition(0, 0, false)
   }
 
   private refreshReportView(): void {
@@ -108,7 +132,13 @@ export class RoastApp {
     this.renderer.root.alignItems = "center"
     this.renderer.root.justifyContent = "center"
 
-    this.renderer.root.remove(this.inputPage.view)
+    if (this.currentState === "LOADING") {
+      this.loadingPage.stopAnimation()
+      this.renderer.root.remove(this.loadingPage.view)
+    } else {
+      this.renderer.root.remove(this.inputPage.view)
+    }
+
     if (this.reportView) {
       this.renderer.root.remove(this.reportView)
     }
@@ -124,6 +154,10 @@ export class RoastApp {
   }
 
   private showInputScreen(): void {
+    if (this.currentState === "LOADING") {
+      this.loadingPage.stopAnimation()
+      this.renderer.root.remove(this.loadingPage.view)
+    }
     if (this.reportView) {
       this.renderer.root.remove(this.reportView)
       this.reportView = null
@@ -142,6 +176,10 @@ export class RoastApp {
       this.handleInputKey(key)
     } else if (this.currentState === "REPORT") {
       this.handleReportKey(key)
+    } else if (this.currentState === "LOADING") {
+      if (key.name === "escape") {
+        this.renderer.destroy()
+      }
     }
   }
 
@@ -152,7 +190,7 @@ export class RoastApp {
     }
 
     if (ENTER_KEYS.has(key.name)) {
-      this.triggerAnalysis()
+      void this.triggerAnalysis()
       return
     }
 
